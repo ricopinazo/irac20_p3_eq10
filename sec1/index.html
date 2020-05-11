@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			video {
+				width: 640px;
+				height: 360px;
+			}
+		</style>
+	</head>
+	<body>
+		
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/dashjs/3.1.0/dash.all.min.js"></script>
+
+		<script>
+			var player;
+			document.addEventListener("DOMContentLoaded", function () {
+				init();
+			});
+			function init(){
+				player = dashjs.MediaPlayerFactory.create( document.querySelector(".dashjs-player"));
+			};
+		</script>
+
+		<video class="dashjs-player" autoplay controls preload="auto">
+			<source src="https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd" type="application/dash+xml"/>
+		</video>
+	</body>
+</html>
+
+

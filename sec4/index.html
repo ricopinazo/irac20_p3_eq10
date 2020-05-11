@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			video {
+				width: 640px;
+				height: 360px;
+			}
+		</style>
+	</head>
+
+	<body>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/dashjs/3.1.0/dash.all.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.0/jquery.min.js"></script>
+		<script type="text/javascript" src="https://gstatic.com/charts/loader.js"></script>
+		<script>
+
+			google.charts.load('current', {packages: ['corechart', 'line']});
+			google.charts.setOnLoadCallback(initGraphics);
+			var time;
+			var bufferData;
+			var bitrateData;
+			var bufferOptions;
+			var bitrateOptions;
+			var chart;
+
+			function initGraphics() {
+				time = 0;
+				bufferData = new google.visualization.DataTable();
+				bufferData.addColumn('number', 'X');
+				bufferData.addColumn('number', 'Buffer level')
+				bitrateData = new google.visualization.DataTable();
+				bitrateData.addColumn('number', 'X');
+				bitrateData.addColumn('number', 'Bitrate');
+				
+				bufferOptions = {
+					hAxis: {
+						title: 'Time(s)'
+					},
+					vAxis: {
+						title: 'seconds'
+					},
+					colors: ['#E38827'],
+				};
+
+				bitrateOptions = {
+					hAxis: {
+						title: 'Time(s)'
+					},
+					vAxis: {
+						title: 'Kbps'
+					},
+					colors: ['#4fb9ff'],
+				};
+
+				bufferChart = new google.visualization.LineChart(document.getElementById('buffer_chart_div'));
+				bitrateChart = new google.visualization.LineChart(document.getElementById('bitrate_chart_div'));
+			}
+			
+
+			document.addEventListener("DOMContentLoaded", function () {
+				init();
+			});
+			function init(){
+				var xhttp=new XMLHttpRequest();
+				xhttp.open("GET", document.location.href + "keys", false);
+				xhttp.send();
+				var protData = JSON.parse(xhttp.responseText);
+
+				var video,
+				player,
+				mpd_url = "./output/stream.mpd";
+				video = document.querySelector("video");
+				player = dashjs.MediaPlayer().create();
+				player.initialize(video, mpd_url, true);
+				player.setProtectionData(protData);
+				player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], function() {
+					clearInterval(eventPoller);
+				});
+				var eventPoller = setInterval(function() {
+					var streamInfo = player.getActiveStream().getStreamInfo();
+					var dashMetrics = player.getDashMetrics();
+					var dashAdapter = player.getDashAdapter();
+					if (dashMetrics && streamInfo) {
+						const periodIdx = streamInfo.index;
+						var repSwitch = dashMetrics.getCurrentRepresentationSwitch('video', true);
+						var bufferLevel = dashMetrics.getCurrentBufferLevel('video', true);
+						var bitrate = repSwitch ? Math.round(dashAdapter.
+							getBandwidthForRepresentation(repSwitch.to,periodIdx) / 1000) : NaN;
+						document.getElementById('buffer').innerText = bufferLevel;
+						document.getElementById('bitrate').innerText = bitrate;
+						document.getElementById('representation').innerText = repSwitch.to;
+
+						bufferData.addRow([time, bufferLevel]);
+						bitrateData.addRow([time, bitrate]);
+						bufferChart.draw(bufferData, bufferOptions);
+						bitrateChart.draw(bitrateData, bitrateOptions);
+						time = time + 500
+					}
+				}, 500);
+		}
+		</script>
+
+		<div class="code">
+			<video class="dashjs-player" autoplay controls preload="auto" muted></video>
+		</div>
+		<div class="code">
+			<p>Video Bitrate: <span id="bitrate"></span> Kbps</p>
+			<p>Video Buffer: <span id="buffer"></span> seconds</p>
+			<p>Video Representation: <span id="representation"></span></p>
+		</div>
+		<div id="buffer_chart_div"></div>
+		<div id="bitrate_chart_div"></div>
+
+	</body>
+</html>
